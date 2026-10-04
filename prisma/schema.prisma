@@ -1,0 +1,101 @@
+// Enum-like columns are plain strings (SQLite); allowed values are enforced in src/lib/domain.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  role         String       @default("GUEST") // GUEST | HOST | ADMIN
+  createdAt    DateTime     @default(now())
+  hostProfile  HostProfile?
+  bookings     Booking[]
+}
+
+model HostProfile {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName           String    @default("")
+  bio                   String    @default("")
+  phone                 String    @default("")
+  addressLine           String    @default("")
+  postalCode            String    @default("")
+  city                  String    @default("")
+  siret                 String    @default("")
+  ddppDeclarationDate   DateTime?
+  hygieneTrainingDate   DateTime?
+  insurer               String    @default("")
+  insurancePolicyNumber String    @default("")
+  housingConsent        Boolean   @default(false)
+  charterAccepted       Boolean   @default(false)
+  status                String    @default("DRAFT") // DRAFT | PENDING | APPROVED | REJECTED
+  rejectionReason       String?
+  submittedAt           DateTime?
+  createdAt             DateTime  @default(now())
+  listings              Listing[]
+}
+
+model Listing {
+  id               String      @id @default(cuid())
+  hostId           String
+  host             HostProfile @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  cuisine          String
+  type             String // PICKUP | DELIVERY | DINE_IN
+  priceCents       Int
+  allergens        String      @default("[]") // JSON array of EU-14 allergen codes
+  deliveryRadiusKm Int?
+  deliveryFeeCents Int?
+  imageUrl         String?
+  city             String
+  published        Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  slots            Slot[]
+
+  @@index([city, type])
+}
+
+model Slot {
+  id        String    @id @default(cuid())
+  listingId String
+  listing   Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  startsAt  DateTime
+  capacity  Int
+  bookings  Booking[]
+
+  @@index([listingId, startsAt])
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  slotId          String
+  slot            Slot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  guestId         String
+  guest           User     @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  quantity        Int
+  status          String   @default("REQUESTED") // REQUESTED | CONFIRMED | DECLINED | CANCELLED | COMPLETED
+  deliveryAddress String?
+  note            String?
+  totalCents      Int
+  createdAt       DateTime @default(now())
+  review          Review?
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+}
