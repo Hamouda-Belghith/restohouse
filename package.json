@@ -2,17 +2,17 @@
   "name": "restohouse",
   "version": "0.1.0",
   "private": true,
-  "description": "RestoHouse — home cooking marketplace: pickup, delivery and dine-in at local hosts.",
+  "description": "RestoHouse \u2014 home cooking marketplace: pickup, delivery and dine-in at local hosts.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma migrate deploy && next build",
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "db:push": "prisma db push",
     "db:seed": "prisma db seed",
-    "db:reset": "prisma db push --force-reset && prisma db seed",
-    "setup": "prisma db push && prisma db seed"
+    "setup": "prisma migrate deploy && prisma db seed",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

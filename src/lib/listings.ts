@@ -17,9 +17,9 @@ export async function searchListings(f: SearchFilters, take = 30) {
   const listings = await db.listing.findMany({
     where: {
       ...PUBLIC,
-      ...(f.city ? { city: { contains: f.city.trim() } } : {}),
+      ...(f.city ? { city: { contains: f.city.trim(), mode: "insensitive" as const } } : {}),
       ...(f.type && isListingType(f.type) ? { type: f.type } : {}),
-      ...(f.cuisine ? { cuisine: { contains: f.cuisine.trim() } } : {}),
+      ...(f.cuisine ? { cuisine: { contains: f.cuisine.trim(), mode: "insensitive" as const } } : {}),
     },
     include: {
       host: { select: { displayName: true } },

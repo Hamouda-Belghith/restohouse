@@ -33,7 +33,7 @@ See [`docs/legal/france-eu.md`](docs/legal/france-eu.md).
 ## Stack
 
 Next.js 16 (App Router, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 ·
-Prisma 6 + SQLite · bcryptjs + jose (cookie sessions) · Vitest
+Prisma 6 + PostgreSQL (Neon) · bcryptjs + jose (cookie sessions) · Vitest
 
 ```
 src/lib/domain/   pure business rules (SIRET, allergens, compliance, booking, privacy, reviews), unit-tested
@@ -49,8 +49,9 @@ Requires Node ≥ 20.9.
 
 ```bash
 npm install
-cp .env.example .env          # then set SESSION_SECRET (openssl rand -base64 32)
-npm run setup                 # create SQLite DB + seed demo data
+vercel env pull .env          # DATABASE_URL, DATABASE_URL_UNPOOLED, SESSION_SECRET
+                              # (or copy .env.example and fill it in)
+npm run setup                 # apply migrations + seed demo data
 npm run dev                   # http://localhost:3000
 ```
 
@@ -66,6 +67,16 @@ Demo accounts (password `password123`):
 | admin@restohouse.test | Admin |
 
 Re-running `npm run db:seed` wipes and recreates the demo data.
+
+## Deployment
+
+Hosted on **Vercel** (team `hbe-projects`, project `restohouse`), with a **Neon
+Postgres** database added through the Vercel Marketplace. Every push to `main`
+deploys to production automatically. `npm run build` applies pending Prisma
+migrations (`prisma migrate deploy`) before `next build`.
+
+- Schema change: edit `prisma/schema.prisma`, run `npm run db:migrate`, then commit the new migration.
+- Refresh demo data (slots are relative to the seed date): `npm run db:seed`. This wipes all rows.
 
 ## Scripts
 
