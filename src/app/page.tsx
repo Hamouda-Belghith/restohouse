@@ -28,9 +28,9 @@ export default async function Home() {
           <SearchForm />
         </div>
         <div className="hidden grid-cols-2 gap-3 md:grid">
-          {featured.slice(0, 4).map((l) => (
+          {featured.filter((l) => l.imageUrl).slice(0, 4).map((l) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={l.id} src={l.imageUrl ?? ""} alt="" className="aspect-square rounded-2xl object-cover odd:translate-y-6" />
+            <img key={l.id} src={l.imageUrl!} alt="" className="aspect-square rounded-2xl object-cover odd:translate-y-6" />
           ))}
         </div>
       </section>
