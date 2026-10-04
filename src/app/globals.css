@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #faf6ef;
+  --color-paper: #ffffff;
+  --color-ink: #2a211c;
+  --color-muted: #7a6a5f;
+  --color-line: #e8dfd2;
+  --color-terracotta: #c4552d;
+  --color-terracotta-dark: #a0441f;
+  --color-olive: #5f6f3a;
+  --color-saffron: #e6a532;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-terracotta px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-terracotta-dark disabled:opacity-60;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-ink;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium;
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-paper;
+  }
+  .h1 {
+    @apply font-serif text-3xl font-semibold tracking-tight sm:text-4xl;
+  }
+  .h2 {
+    @apply font-serif text-xl font-semibold;
+  }
+}
