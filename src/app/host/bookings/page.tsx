@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StatusButton, StatusPill } from "@/components/BookingStatus";
 import { TypeBadge } from "@/components/ListingCard";
-import { requireApprovedHost } from "@/lib/auth";
+import { requireHost } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canTransition } from "@/lib/domain/booking";
 import { formatDateTime, formatEuros } from "@/lib/form";
@@ -9,7 +9,7 @@ import { formatDateTime, formatEuros } from "@/lib/form";
 export const dynamic = "force-dynamic";
 
 export default async function HostBookingsPage() {
-  const { profile } = await requireApprovedHost();
+  const { profile } = await requireHost();
   const bookings = await db.booking.findMany({
     where: { slot: { listing: { hostId: profile.id } } },
     include: { guest: { select: { name: true } }, slot: { include: { listing: true } } },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isValidSiret } from "./siret";
 import { ALLERGENS, validateAllergens } from "./allergens";
-import { canPublish, missingComplianceItems, type ComplianceInput } from "./compliance";
+import { canPublish, complianceErrors, hostBasicsErrors, legalErrors, type ComplianceInput } from "./compliance";
 import { validateListingInput, validateSlotCapacity, type ListingInput } from "./listing";
 import { canTransition, remainingCapacity, validateBookingRequest, type BookingRequest } from "./booking";
 import { visibleAddress } from "./privacy";
@@ -59,21 +59,25 @@ describe("compliance", () => {
     charterAccepted: true,
   };
   it("returns nothing missing for a complete profile", () => {
-    expect(missingComplianceItems(complete, NOW)).toEqual([]);
+    expect(complianceErrors(complete, NOW)).toEqual({});
   });
-  it("lists every missing item for an empty profile", () => {
-    const missing = missingComplianceItems({}, NOW);
-    for (const key of ["displayName", "address", "siret", "ddpp", "hygieneTraining", "insurance", "housingConsent", "charter"]) {
-      expect(missing.some((m) => m.startsWith(key))).toBe(true);
-    }
+  it("flags every missing field for an empty profile", () => {
+    expect(Object.keys(complianceErrors({}, NOW)).sort()).toEqual(
+      [
+        "displayName", "addressLine", "postalCode", "city", "siret", "ddppDeclarationDate",
+        "hygieneTrainingDate", "insurer", "insurancePolicyNumber", "housingConsent", "charterAccepted",
+      ].sort(),
+    );
+  });
+  it("only needs name and address to open a host account", () => {
+    const basics = { displayName: "Chez Amel", addressLine: "12 rue des Lilas", postalCode: "75011", city: "Paris" };
+    expect(hostBasicsErrors(basics)).toEqual({});
+    expect(Object.keys(hostBasicsErrors({ ...basics, postalCode: "7501", city: " " }))).toEqual(["postalCode", "city"]);
+    expect(Object.keys(legalErrors(basics, NOW)).length).toBeGreaterThan(0);
   });
   it("rejects an invalid SIRET and a hygiene training in the future", () => {
-    const missing = missingComplianceItems(
-      { ...complete, siret: "123", hygieneTrainingDate: new Date("2027-01-01") },
-      NOW,
-    );
-    expect(missing.some((m) => m.startsWith("siret"))).toBe(true);
-    expect(missing.some((m) => m.startsWith("hygieneTraining"))).toBe(true);
+    const errors = complianceErrors({ ...complete, siret: "123", hygieneTrainingDate: new Date("2027-01-01") }, NOW);
+    expect(Object.keys(errors).sort()).toEqual(["hygieneTrainingDate", "siret"]);
   });
   it("only approved hosts can publish", () => {
     expect(canPublish("APPROVED")).toBe(true);

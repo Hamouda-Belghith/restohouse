@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { missingComplianceItems } from "@/lib/domain/compliance";
+import { complianceErrors } from "@/lib/domain/compliance";
 import { str, type FormState } from "@/lib/form";
 
 export async function reviewHost(_: FormState, form: FormData): Promise<FormState> {
@@ -14,8 +14,8 @@ export async function reviewHost(_: FormState, form: FormData): Promise<FormStat
   if (!profile || profile.status !== "PENDING") return { errors: ["This profile is not waiting for review."] };
 
   if (decision === "approve") {
-    const missing = missingComplianceItems(profile, new Date());
-    if (missing.length) return { errors: missing.map((m) => m.split(": ")[1]) };
+    const missing = Object.values(complianceErrors(profile, new Date()));
+    if (missing.length) return { errors: missing };
     await db.hostProfile.update({ where: { id: profile.id }, data: { status: "APPROVED", rejectionReason: null } });
   } else if (decision === "reject") {
     if (!reason) return { errors: ["Give the host a reason so they can fix their profile."] };

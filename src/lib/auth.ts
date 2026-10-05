@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { cache } from "react";
 import { db } from "./db";
+import { hostBasicsErrors } from "./domain/compliance";
 
 const COOKIE = "rh_session";
 const MAX_AGE_S = 60 * 60 * 24 * 30;
@@ -59,11 +60,19 @@ export async function requireAdmin(): Promise<CurrentUser> {
   return user;
 }
 
-/** Returns the user's host profile only if it is approved; otherwise sends them to /host. */
-export async function requireApprovedHost() {
+/** A host account exists once the public name and kitchen address are filled in. */
+export function hasHostAccount(profile: CurrentUser["hostProfile"]): profile is NonNullable<CurrentUser["hostProfile"]> {
+  return !!profile && Object.keys(hostBasicsErrors(profile)).length === 0;
+}
+
+/**
+ * Returns the user's host profile, or sends them to /host to open a host account.
+ * Legal verification is NOT required here: unverified hosts can prepare offers but not publish them.
+ */
+export async function requireHost() {
   const user = await requireUser("/host");
   const profile = user.hostProfile;
-  if (!profile || profile.status !== "APPROVED") redirect("/host");
+  if (!hasHostAccount(profile)) redirect("/host");
   return { user, profile };
 }
 

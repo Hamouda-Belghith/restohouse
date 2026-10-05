@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, hasHostAccount } from "@/lib/auth";
 import { logout } from "./(auth)/actions";
 import "./globals.css";
 
@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <>
                 <Link href="/bookings" className="hover:text-terracotta">My bookings</Link>
                 <Link href="/host" className="hover:text-terracotta">
-                  {user.hostProfile?.status === "APPROVED" ? "Host dashboard" : "Become a host"}
+                  {hasHostAccount(user.hostProfile) ? "Host dashboard" : "Become a host"}
                 </Link>
                 {user.role === "ADMIN" && <Link href="/admin" className="hover:text-terracotta">Admin</Link>}
                 <form action={logout}>

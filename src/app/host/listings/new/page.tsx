@@ -1,11 +1,11 @@
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
-import { requireApprovedHost } from "@/lib/auth";
+import { requireHost } from "@/lib/auth";
 import { ALLERGENS } from "@/lib/domain/allergens";
 import { LISTING_TYPES, LISTING_TYPE_LABELS, MAX_DELIVERY_RADIUS_KM, MAX_DINE_IN_SEATS } from "@/lib/domain/listing";
 import { createListing } from "../../actions";
 
 export default async function NewListingPage() {
-  const { profile } = await requireApprovedHost();
+  const { profile } = await requireHost();
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="h1">New offer</h1>

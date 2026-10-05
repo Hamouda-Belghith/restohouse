@@ -2,27 +2,49 @@
 
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { requireApprovedHost, requireUser } from "@/lib/auth";
+import { requireHost, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { canPublish, missingComplianceItems } from "@/lib/domain/compliance";
+import { canPublish, complianceErrors, hostBasicsErrors } from "@/lib/domain/compliance";
 import { validateListingInput, validateSlotCapacity } from "@/lib/domain/listing";
 import { parseLocalDateTime } from "@/lib/domain/time";
 import { dateOrNull, eurosToCents, str, type FormState } from "@/lib/form";
 
-export async function saveHostProfile(_: FormState, form: FormData): Promise<FormState> {
+const LOCKED_MESSAGE = "Your verification is under review or approved. Contact support to change verified details.";
+const isLocked = (status?: string) => status === "PENDING" || status === "APPROVED";
+
+/** Opens the host account (or edits it). Only the public page and kitchen address are needed. */
+export async function saveHostAccount(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser("/host");
   const current = user.hostProfile;
-  if (current && (current.status === "PENDING" || current.status === "APPROVED")) {
-    return { errors: ["Your profile is under review or approved. Contact support to change verified details."] };
-  }
+  if (isLocked(current?.status)) return { errors: [LOCKED_MESSAGE] };
 
   const data = {
     displayName: str(form, "displayName"),
     bio: str(form, "bio").slice(0, 1000),
     phone: str(form, "phone"),
     addressLine: str(form, "addressLine"),
-    postalCode: str(form, "postalCode"),
+    postalCode: str(form, "postalCode").replace(/\s/g, ""),
     city: str(form, "city"),
+  };
+  const fieldErrors = hostBasicsErrors(data);
+  if (Object.keys(fieldErrors).length) return { fieldErrors };
+
+  await db.hostProfile.upsert({ where: { userId: user.id }, create: { ...data, userId: user.id }, update: data });
+  if (user.role === "GUEST") await db.user.update({ where: { id: user.id }, data: { role: "HOST" } });
+
+  revalidatePath("/", "layout");
+  redirect("/host");
+}
+
+/**
+ * Saves the legal & hygiene details, and submits them for verification when intent=submit.
+ * Hosts can do this at any time after opening their account; publishing waits for approval.
+ */
+export async function saveLegalDetails(_: FormState, form: FormData): Promise<FormState> {
+  const { user, profile } = await requireHost();
+  if (isLocked(profile.status)) return { errors: [LOCKED_MESSAGE] };
+
+  const data = {
     siret: str(form, "siret").replace(/\s/g, ""),
     ddppDeclarationDate: dateOrNull(str(form, "ddppDeclarationDate")),
     hygieneTrainingDate: dateOrNull(str(form, "hygieneTrainingDate")),
@@ -33,19 +55,17 @@ export async function saveHostProfile(_: FormState, form: FormData): Promise<For
   };
 
   const submit = form.get("intent") === "submit";
-  const missing = submit ? missingComplianceItems(data, new Date()) : [];
-  const status = submit && !missing.length ? "PENDING" : "DRAFT";
+  const fieldErrors = submit ? complianceErrors({ ...profile, ...data }, new Date()) : {};
+  const submitted = submit && !Object.keys(fieldErrors).length;
 
-  await db.hostProfile.upsert({
+  await db.hostProfile.update({
     where: { userId: user.id },
-    create: { ...data, userId: user.id, status },
-    update: { ...data, status, rejectionReason: null, ...(status === "PENDING" ? { submittedAt: new Date() } : {}) },
+    data: submitted ? { ...data, status: "PENDING", rejectionReason: null, submittedAt: new Date() } : data,
   });
-  if (user.role === "GUEST") await db.user.update({ where: { id: user.id }, data: { role: "HOST" } });
 
-  revalidatePath("/host");
-  if (missing.length) return { errors: missing.map((m) => m.split(": ")[1]) };
-  return { message: status === "PENDING" ? "Submitted! We'll review your profile shortly." : "Draft saved." };
+  revalidatePath("/host", "layout");
+  if (!submitted && submit) return { fieldErrors };
+  return { message: submitted ? "Submitted! We'll review your details shortly." : "Draft saved." };
 }
 
 function listingFromForm(form: FormData) {
@@ -65,7 +85,7 @@ function listingFromForm(form: FormData) {
 }
 
 export async function createListing(_: FormState, form: FormData): Promise<FormState> {
-  const { profile } = await requireApprovedHost();
+  const { profile } = await requireHost();
   const input = listingFromForm(form);
   const check = validateListingInput(input);
   if (!check.ok) return { errors: check.errors };
@@ -91,7 +111,7 @@ export async function createListing(_: FormState, form: FormData): Promise<FormS
 
 /** Loads a listing owned by the current approved host, or 404s. */
 async function ownedListing(listingId: string) {
-  const { profile } = await requireApprovedHost();
+  const { profile } = await requireHost();
   const listing = await db.listing.findFirst({ where: { id: listingId, hostId: profile.id } });
   if (!listing) notFound();
   return { listing, profile };
@@ -100,7 +120,9 @@ async function ownedListing(listingId: string) {
 export async function setPublished(_: FormState, form: FormData): Promise<FormState> {
   const { listing, profile } = await ownedListing(str(form, "listingId"));
   const published = form.get("published") === "true";
-  if (published && !canPublish(profile.status)) return { errors: ["Only approved hosts can publish."] };
+  if (published && !canPublish(profile.status)) {
+    return { errors: ["Your legal & hygiene details must be verified before you can publish. Finish them from your dashboard."] };
+  }
   await db.listing.update({ where: { id: listing.id }, data: { published } });
   revalidatePath(`/host/listings/${listing.id}`);
   return { message: published ? "Published: guests can now book it." : "Unpublished." };

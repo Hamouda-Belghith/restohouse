@@ -1,5 +1,8 @@
-/** State returned by server actions used with useActionState. */
-export type FormState = { errors?: string[]; message?: string } | undefined;
+/**
+ * State returned by server actions used with useActionState.
+ * `fieldErrors` is keyed by input name so fields can highlight themselves.
+ */
+export type FormState = { errors?: string[]; fieldErrors?: Record<string, string>; message?: string } | undefined;
 
 export const str = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 

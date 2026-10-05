@@ -20,7 +20,7 @@ See [`docs/legal/france-eu.md`](docs/legal/france-eu.md).
 - The host's exact address is revealed only after the host confirms
 
 **Hosts**
-- Compliance onboarding: SIRET (checksum validated), DDPP declaration, 14h hygiene training, RC Pro insurance, housing consent, charter
+- Host onboarding in two steps: open a host account (name + kitchen address) and prepare offers right away; legal & hygiene verification (SIRET with checksum, DDPP declaration, 14h hygiene training, RC Pro insurance, housing consent, charter) runs in parallel and is required to publish
 - Offers with a mandatory allergen declaration, delivery radius ≤ 15 km, dine-in ≤ 12 seats per slot
 - Time slots (Paris time), publish/unpublish, confirm / decline / complete bookings
 

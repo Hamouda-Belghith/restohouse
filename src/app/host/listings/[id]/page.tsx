@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/ActionForm";
 import { TypeBadge } from "@/components/ListingCard";
-import { requireApprovedHost } from "@/lib/auth";
+import { requireHost } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { allergenLabel } from "@/lib/domain/allergens";
+import { canPublish } from "@/lib/domain/compliance";
 import { remainingCapacity } from "@/lib/domain/booking";
 import { MAX_DINE_IN_SEATS } from "@/lib/domain/listing";
 import { formatDateTime, formatEuros } from "@/lib/form";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ManageListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { profile } = await requireApprovedHost();
+  const { profile } = await requireHost();
   const listing = await db.listing.findFirst({
     where: { id, hostId: profile.id },
     include: {
@@ -47,13 +48,25 @@ export default async function ManageListingPage({ params }: { params: Promise<{ 
             <> · <Link className="underline" href={`/listings/${listing.id}`}>View public page</Link></>
           )}
         </p>
-        <ActionForm action={setPublished}>
-          <input type="hidden" name="listingId" value={listing.id} />
-          <input type="hidden" name="published" value={String(!listing.published)} />
-          <SubmitButton className={listing.published ? "btn-ghost" : "btn"}>
-            {listing.published ? "Unpublish" : "Publish"}
-          </SubmitButton>
-        </ActionForm>
+        {listing.published || canPublish(profile.status) ? (
+          <ActionForm action={setPublished}>
+            <input type="hidden" name="listingId" value={listing.id} />
+            <input type="hidden" name="published" value={String(!listing.published)} />
+            <SubmitButton className={listing.published ? "btn-ghost" : "btn"}>
+              {listing.published ? "Unpublish" : "Publish"}
+            </SubmitButton>
+          </ActionForm>
+        ) : (
+          <p className="text-sm text-muted">
+            {profile.status === "PENDING" ? (
+              "You can publish once your legal & hygiene details are verified (under review)."
+            ) : (
+              <>
+                To publish, <Link href="/host/verification" className="underline">complete your legal & hygiene verification</Link>.
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       <section className="card space-y-4 p-5">
